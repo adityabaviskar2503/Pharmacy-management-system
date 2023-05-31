@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fetch Medicines Data</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .add-button {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .add-button button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 14px;
+      margin: 4px 2px;
+      cursor: pointer;
+    }
+    .billing-table {
+      display: none;
+      margin-top: 20px;
+    }
+    .billing-table th, .billing-table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+    .billing-total-row td {
+      text-align: right;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Medicines Data</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Medicine Name</th>
+        <th>Company</th>
+        <th>Expiry Date</th>
+        <th>Manufacture Date</th>
+        <th>Medicine Type</th>
+        <th>Price ($)</th> <!-- New column header -->
+      </tr>
+    </thead>
+    <tbody id="medicines-list"></tbody>
+  </table>
+
+  <div class="add-button">
+    <button id="add-button">ADD</button>
+  </div>
+
+  <table class="billing-table" id="billing-table">
+    <thead>
+      <tr>
+        <th>Medicine Name</th>
+        <th>Price ($)</th>
+        <th>Company</th>
+        <th>Bill Total ($)</th> <!-- Updated column header -->
+      </tr>
+    </thead>
+    <tbody id="billing-list"></tbody>
+    <tfoot>
+      <tr class="billing-total-row">
+        <td colspan="3">Total</td>
+        <td id="billing-total">0.00</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <script>
+    // Fetch data from the /allMedicines endpoint
+    fetch('http://localhost:3003/allMedicines')
+      .then(response => response.json())
+      .then(data => {
+        // Handle the response data
+        const medicinesList = document.getElementById('medicines-list');
+        data.forEach(medicine => {
+          const row = document.createElement('tr');
+          const nameCell = document.createElement('td');
+          const companyCell = document.createElement('td');
+          const expiryCell = document.createElement('td');
+          const manufactureCell = document.createElement('td');
+          const typeCell = document.createElement('td');
+          const priceCell = document.createElement('td'); // New cell for price
+
+          nameCell.textContent = medicine.medicineName;
+          companyCell.textContent = medicine.company;
+          expiryCell.textContent = medicine.expiryDate;
+          manufactureCell.textContent = medicine.manufactureDate;
+          typeCell.textContent = medicine.medicineType;
+          priceCell.textContent = `$${medicine.price.toFixed(2)}`; // Display price with 2 decimal places
+
+          row.appendChild(nameCell);
+          row.appendChild(companyCell);
+          row.appendChild(expiryCell);
+          row.appendChild(manufactureCell);
+          row.appendChild(typeCell);
+          row.appendChild(priceCell); // Append the price cell to the row
+
+          medicinesList.appendChild(row);
+        });
+      })
+      .catch(error => {
+        console.log('Error:', error);
+      });
+
+    // Handle the "ADD" button click
+    const addButton = document.getElementById('add-button');
+    const billingTable = document.getElementById('billing-table');
+    const billingList = document.getElementById('billing-list');
+    const billingTotal = document.getElementById('billing-total');
+    addButton.addEventListener('click', () => {
+      // Get the selected row from the medicines table
+      const selectedRow = document.querySelector('#medicines-list tr.selected');
+      if (selectedRow) {
+        const name = selectedRow.cells[0].textContent;
+        const price = parseFloat(selectedRow.cells[5].textContent.replace('$', '')); // Get the price value from the selected row
+        const company = selectedRow.cells[1].textContent;
+        const billTotal = parseFloat(billingTotal.textContent) + price;
+
+        // Create a new row in the billing table
+        const newRow = document.createElement('tr');
+        const nameCell = document.createElement('td');
+        const priceCell = document.createElement('td');
+        const companyCell = document.createElement('td');
+        const billTotalCell = document.createElement('td');
+
+        nameCell.textContent = name;
+        priceCell.textContent = `$${price.toFixed(2)}`;
+        companyCell.textContent = company;
+        billTotalCell.textContent = `$${billTotal.toFixed(2)}`;
+
+        newRow.appendChild(nameCell);
+        newRow.appendChild(priceCell);
+        newRow.appendChild(companyCell);
+        newRow.appendChild(billTotalCell);
+
+        billingList.appendChild(newRow);
+        billingTotal.textContent = billTotal.toFixed(2);
+
+        // Highlight the selected row in the medicines table
+        selectedRow.classList.remove('selected');
+        selectedRow.style.backgroundColor = '';
+      }
+    });
+
+    // Highlight the selected row in the medicines table
+    const medicinesTable = document.getElementById('medicines-list');
+    medicinesTable.addEventListener('click', (event) => {
+      const selectedRow = event.target.closest('tr');
+      if (selectedRow) {
+        const alreadySelected = selectedRow.classList.contains('selected');
+        if (!alreadySelected) {
+          const previouslySelected = medicinesTable.querySelector('tr.selected');
+          if (previouslySelected) {
+            previouslySelected.classList.remove('selected');
+            previouslySelected.style.backgroundColor = '';
+          }
+          selectedRow.classList.add('selected');
+          selectedRow.style.backgroundColor = '#ffc';
+        } else {
+          selectedRow.classList.remove('selected');
+          selectedRow.style.backgroundColor = '';
+        }
+      }
+    });
+
+    // Show the billing table when the "ADD" button is clicked
+    addButton.addEventListener('click', () => {
+      billingTable.style.display = 'table';
+    });
+  </script>
+</body>
+</html>
